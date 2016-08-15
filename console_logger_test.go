@@ -99,7 +99,7 @@ func (s *GomolSuite) TestConsoleColorLogm(c *C) {
 	cl, _ := NewConsoleLogger(cfg)
 	w := newTestConsoleWriter()
 	cl.setWriter(w)
-	cl.Logm(time.Now(), gomol.LEVEL_FATAL, nil, "test")
+	cl.Logm(time.Now(), gomol.LevelFatal, nil, "test")
 	c.Assert(w.Output, HasLen, 1)
 	c.Check(w.Output[0], Equals, "[\x1b[1;31mFATAL\x1b[0m] test\n")
 }
@@ -112,7 +112,7 @@ func (s *GomolSuite) TestConsoleLogm(c *C) {
 	cl.setWriter(w)
 	cl.Logm(
 		time.Now(),
-		gomol.LEVEL_FATAL,
+		gomol.LevelFatal,
 		map[string]interface{}{
 			"attr1": 4321,
 		},
@@ -134,7 +134,7 @@ func (s *GomolSuite) TestConsoleBaseAttrs(c *C) {
 	b.AddLogger(cl)
 	cl.Logm(
 		time.Now(),
-		gomol.LEVEL_DEBUG,
+		gomol.LevelDebug,
 		map[string]interface{}{
 			"attr1": 4321,
 			"attr3": "val3",
