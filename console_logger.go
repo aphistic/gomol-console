@@ -43,8 +43,7 @@ func NewConsoleLogger(config *ConsoleLoggerConfig) (*ConsoleLogger, error) {
 		writer: &ttyWriter{},
 		config: config,
 	}
-	tpl, _ := gomol.NewTemplate("[{{color}}{{ucase .LevelName}}{{reset}}] {{.Message}}")
-	l.tpl = tpl
+	l.tpl = NewTemplateDefault()
 	return l, nil
 }
 
