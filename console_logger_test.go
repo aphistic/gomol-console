@@ -63,6 +63,38 @@ func (s *GomolSuite) TestIssue5StringFormatting(c *C) {
 	c.Check(w.Output[0], Equals, "[DEBUG] msg 100%\n")
 }
 
+func (s *GomolSuite) TestAttrsMergedFromBase(c *C) {
+	b := gomol.NewBase()
+	b.SetAttr("base_attr", "foo")
+	b.InitLoggers()
+
+	cfg := NewConsoleLoggerConfig()
+	cfg.Colorize = false
+	l, err := NewConsoleLogger(cfg)
+
+	testTpl, _ := gomol.NewTemplate("[{{color}}{{ucase .LevelName}}{{reset}}] {{.Message}}" +
+		"{{if .Attrs}}{{range $key, $val := .Attrs}}\n   {{$key}}: {{$val}}{{end}}{{end}}")
+
+	l.SetTemplate(testTpl)
+	c.Assert(err, IsNil)
+	w := newTestConsoleWriter()
+	l.setWriter(w)
+	b.AddLogger(l)
+
+	la := b.NewLogAdapter(gomol.NewAttrsFromMap(map[string]interface{}{
+		"adapter_attr": "bar",
+	}))
+
+	la.Dbgm(gomol.NewAttrsFromMap(map[string]interface{}{
+		"log_attr": "baz",
+	}), "msg %v%%", 100)
+
+	b.ShutdownLoggers()
+
+	c.Assert(w.Output, HasLen, 1)
+	c.Check(w.Output[0], Equals, "[DEBUG] msg 100%\n   adapter_attr: bar\n   base_attr: foo\n   log_attr: baz\n")
+}
+
 // General tests
 
 func (s *GomolSuite) TestConsoleSetTemplate(c *C) {

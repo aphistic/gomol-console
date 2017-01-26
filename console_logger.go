@@ -87,7 +87,19 @@ func (l *ConsoleLogger) ShutdownLogger() error {
 }
 
 func (l *ConsoleLogger) Logm(timestamp time.Time, level gomol.LogLevel, attrs map[string]interface{}, msg string) error {
-	nMsg := gomol.NewTemplateMsg(timestamp, level, attrs, msg)
+	mergedAttrs := make(map[string]interface{})
+
+	if l.base != nil && l.base.BaseAttrs != nil {
+		for key, val := range l.base.BaseAttrs.Attrs() {
+			mergedAttrs[key] = val
+		}
+	}
+
+	for key, val := range attrs {
+		mergedAttrs[key] = val
+	}
+
+	nMsg := gomol.NewTemplateMsg(timestamp, level, mergedAttrs, msg)
 	out, err := l.tpl.Execute(nMsg, l.config.Colorize)
 	if err != nil {
 		return err
