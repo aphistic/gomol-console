@@ -1,15 +1,14 @@
 package gomolconsole
 
 import (
-	gc "."
 	"github.com/aphistic/gomol"
 )
 
 // Code for the README example to make sure it still builds!
 func Example() {
 	// Add an io.Writer logger
-	consoleCfg := gc.NewConsoleLoggerConfig()
-	consoleLogger, _ := gc.NewConsoleLogger(consoleCfg)
+	consoleCfg := NewConsoleLoggerConfig()
+	consoleLogger, _ := NewConsoleLogger(consoleCfg)
 	gomol.AddLogger(consoleLogger)
 
 	// Set some global attrs that will be added to all
