@@ -3,6 +3,8 @@ package gomolconsole
 import (
 	"errors"
 	"fmt"
+	"io"
+	"os"
 	"time"
 
 	"github.com/aphistic/gomol"
@@ -11,6 +13,7 @@ import (
 
 type ConsoleLoggerConfig struct {
 	Colorize bool
+	Writer   io.Writer
 }
 
 type ConsoleLogger struct {
@@ -26,10 +29,11 @@ type consoleWriter interface {
 
 // TTY writer for logging to the actual console
 type ttyWriter struct {
+	w io.Writer
 }
 
 func (w *ttyWriter) Print(msg string) {
-	fmt.Print(msg)
+	fmt.Fprint(w.w, msg)
 }
 
 func NewConsoleLoggerConfig() *ConsoleLoggerConfig {
@@ -39,11 +43,17 @@ func NewConsoleLoggerConfig() *ConsoleLoggerConfig {
 }
 
 func NewConsoleLogger(config *ConsoleLoggerConfig) (*ConsoleLogger, error) {
+	var w io.Writer = os.Stdout
+	if config != nil && config.Writer != nil {
+		w = config.Writer
+	}
+
 	l := &ConsoleLogger{
-		writer: &ttyWriter{},
+		tpl:    NewTemplateDefault(),
+		writer: &ttyWriter{w: w},
 		config: config,
 	}
-	l.tpl = NewTemplateDefault()
+
 	return l, nil
 }
 
