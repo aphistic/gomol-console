@@ -1,3 +1,4 @@
+// Package gomolconsole implements a console logger for gomol.
 package gomolconsole
 
 import (
@@ -12,28 +13,30 @@ import (
 )
 
 type ConsoleLoggerConfig struct {
+	// Colorize specifies whether the output will include ANSI colors or not. Defaults to true
 	Colorize bool
-	Writer   io.Writer
+
+	// DebugWriter is the io.Writer debug messages will be written to. Defaults to os.Stdout
+	DebugWriter io.Writer
+	// InfoWriter is the io.Writer info messages will be written to. Defaults to os.Stdout
+	InfoWriter io.Writer
+	// WarningWriter is the io.Writer warning messages will be written to. Defaults to os.Stdout
+	WarningWriter io.Writer
+	// ErrorWriter is the io.Writer error messages will be written to. Defaults to os.Stdout
+	ErrorWriter io.Writer
+	// FatalWriter is the io.Writer fatal messages will be written to. Defaults to os.Stdout
+	FatalWriter io.Writer
 }
 
 type ConsoleLogger struct {
 	base          *gomol.Base
-	writer        consoleWriter
+	writers       map[gomol.LogLevel]io.Writer
 	tpl           *gomol.Template
 	isInitialized bool
 	config        *ConsoleLoggerConfig
 }
 type consoleWriter interface {
 	Print(msg string)
-}
-
-// TTY writer for logging to the actual console
-type ttyWriter struct {
-	w io.Writer
-}
-
-func (w *ttyWriter) Print(msg string) {
-	fmt.Fprint(w.w, msg)
 }
 
 func NewConsoleLoggerConfig() *ConsoleLoggerConfig {
@@ -43,16 +46,17 @@ func NewConsoleLoggerConfig() *ConsoleLoggerConfig {
 }
 
 func NewConsoleLogger(config *ConsoleLoggerConfig) (*ConsoleLogger, error) {
-	var w io.Writer = os.Stdout
-	if config != nil && config.Writer != nil {
-		w = config.Writer
+	if config == nil {
+		config = NewConsoleLoggerConfig()
 	}
 
 	l := &ConsoleLogger{
-		tpl:    NewTemplateDefault(),
-		writer: &ttyWriter{w: w},
-		config: config,
+		writers: make(map[gomol.LogLevel]io.Writer),
+		tpl:     NewTemplateDefault(),
+		config:  config,
 	}
+
+	l.populateWriters(config)
 
 	return l, nil
 }
@@ -66,8 +70,28 @@ var printwarn = ansi.ColorFunc("yellow")
 var printerr = ansi.ColorFunc("red")
 var printfatal = ansi.ColorFunc("red+b")
 
-func (l *ConsoleLogger) setWriter(w consoleWriter) {
-	l.writer = w
+func (l *ConsoleLogger) populateWriters(cfg *ConsoleLoggerConfig) {
+	l.writers[gomol.LevelDebug] = os.Stdout
+	l.writers[gomol.LevelInfo] = os.Stdout
+	l.writers[gomol.LevelWarning] = os.Stdout
+	l.writers[gomol.LevelError] = os.Stdout
+	l.writers[gomol.LevelFatal] = os.Stdout
+
+	if cfg.DebugWriter != nil {
+		l.writers[gomol.LevelDebug] = cfg.DebugWriter
+	}
+	if cfg.InfoWriter != nil {
+		l.writers[gomol.LevelInfo] = cfg.InfoWriter
+	}
+	if cfg.WarningWriter != nil {
+		l.writers[gomol.LevelWarning] = cfg.WarningWriter
+	}
+	if cfg.ErrorWriter != nil {
+		l.writers[gomol.LevelError] = cfg.ErrorWriter
+	}
+	if cfg.FatalWriter != nil {
+		l.writers[gomol.LevelFatal] = cfg.FatalWriter
+	}
 }
 
 func (l *ConsoleLogger) SetBase(base *gomol.Base) {
@@ -114,6 +138,12 @@ func (l *ConsoleLogger) Logm(timestamp time.Time, level gomol.LogLevel, attrs ma
 	if err != nil {
 		return err
 	}
-	l.writer.Print(out + "\n")
+
+	w, ok := l.writers[level]
+	if !ok {
+		return fmt.Errorf("unsupported log level")
+	}
+	w.Write([]byte(out + "\n"))
+
 	return nil
 }

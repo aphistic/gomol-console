@@ -29,8 +29,9 @@ func newTestConsoleWriter() *testConsoleWriter {
 	}
 }
 
-func (w *testConsoleWriter) Print(msg string) {
-	w.Output = append(w.Output, msg)
+func (w *testConsoleWriter) Write(b []byte) (int, error) {
+	w.Output = append(w.Output, string(b))
+	return len(b), nil
 }
 
 func (s *GomolSuite) TestTestConsoleWriter(t sweet.T) {
@@ -38,10 +39,10 @@ func (s *GomolSuite) TestTestConsoleWriter(t sweet.T) {
 	Expect(w.Output).ToNot(BeNil())
 	Expect(w.Output).To(HaveLen(0))
 
-	w.Print("print1")
+	w.Write([]byte("print1"))
 	Expect(w.Output).To(HaveLen(1))
 
-	w.Print("print2")
+	w.Write([]byte("print2"))
 	Expect(w.Output).To(HaveLen(2))
 }
 
@@ -51,15 +52,15 @@ func (s *GomolSuite) TestIssue5StringFormatting(t sweet.T) {
 	b := gomol.NewBase()
 	b.InitLoggers()
 
+	w := newTestConsoleWriter()
 	cfg := NewConsoleLoggerConfig()
 	cfg.Colorize = false
+	cfg.DebugWriter = w
 	l, err := NewConsoleLogger(cfg)
 	Expect(err).To(BeNil())
-	w := newTestConsoleWriter()
-	l.setWriter(w)
 	b.AddLogger(l)
 
-	b.Dbgf("msg %v%%", 100)
+	b.Debugf("msg %v%%", 100)
 
 	b.ShutdownLoggers()
 
@@ -72,8 +73,10 @@ func (s *GomolSuite) TestAttrsMergedFromBase(t sweet.T) {
 	b.SetAttr("base_attr", "foo")
 	b.InitLoggers()
 
+	w := newTestConsoleWriter()
 	cfg := NewConsoleLoggerConfig()
 	cfg.Colorize = false
+	cfg.DebugWriter = w
 	l, err := NewConsoleLogger(cfg)
 
 	testTpl, err := gomol.NewTemplate(
@@ -83,15 +86,13 @@ func (s *GomolSuite) TestAttrsMergedFromBase(t sweet.T) {
 
 	l.SetTemplate(testTpl)
 	Expect(err).To(BeNil())
-	w := newTestConsoleWriter()
-	l.setWriter(w)
 	b.AddLogger(l)
 
 	la := b.NewLogAdapter(gomol.NewAttrsFromMap(map[string]interface{}{
 		"adapter_attr": "bar",
 	}))
 
-	la.Dbgm(gomol.NewAttrsFromMap(map[string]interface{}{
+	la.Debugm(gomol.NewAttrsFromMap(map[string]interface{}{
 		"log_attr": "baz",
 	}), "msg %v%%", 100)
 
@@ -133,21 +134,21 @@ func (s *GomolSuite) TestConsoleShutdownLogger(t sweet.T) {
 }
 
 func (s *GomolSuite) TestConsoleColorLogm(t sweet.T) {
-	cfg := NewConsoleLoggerConfig()
-	cl, _ := NewConsoleLogger(cfg)
 	w := newTestConsoleWriter()
-	cl.setWriter(w)
+	cfg := NewConsoleLoggerConfig()
+	cfg.FatalWriter = w
+	cl, _ := NewConsoleLogger(cfg)
 	cl.Logm(time.Now(), gomol.LevelFatal, nil, "test")
 	Expect(w.Output).To(HaveLen(1))
 	Expect(w.Output[0]).To(Equal("[\x1b[1;31mFATAL\x1b[0m] test\n"))
 }
 
 func (s *GomolSuite) TestConsoleLogm(t sweet.T) {
+	w := newTestConsoleWriter()
 	cfg := NewConsoleLoggerConfig()
 	cfg.Colorize = false
+	cfg.FatalWriter = w
 	cl, _ := NewConsoleLogger(cfg)
-	w := newTestConsoleWriter()
-	cl.setWriter(w)
 	cl.Logm(
 		time.Now(),
 		gomol.LevelFatal,
@@ -164,11 +165,11 @@ func (s *GomolSuite) TestConsoleBaseAttrs(t sweet.T) {
 	b.SetAttr("attr1", 7890)
 	b.SetAttr("attr2", "val2")
 
+	w := newTestConsoleWriter()
 	cfg := NewConsoleLoggerConfig()
 	cfg.Colorize = false
+	cfg.DebugWriter = w
 	cl, _ := NewConsoleLogger(cfg)
-	w := newTestConsoleWriter()
-	cl.setWriter(w)
 	b.AddLogger(cl)
 	cl.Logm(
 		time.Now(),
@@ -180,4 +181,99 @@ func (s *GomolSuite) TestConsoleBaseAttrs(t sweet.T) {
 		"test 1234")
 	Expect(w.Output).To(HaveLen(1))
 	Expect(w.Output[0]).To(Equal("[DEBUG] test 1234\n"))
+}
+
+func (s *GomolSuite) TestDebugWriter(t sweet.T) {
+	w := newTestConsoleWriter()
+	cfg := NewConsoleLoggerConfig()
+	cfg.Colorize = false
+	cfg.DebugWriter = w
+	cl, _ := NewConsoleLogger(cfg)
+
+	cl.InitLogger()
+	cl.Logm(
+		time.Now(),
+		gomol.LevelDebug,
+		nil,
+		"message",
+	)
+	Expect(w.Output).To(HaveLen(1))
+	Expect(w.Output[0]).To(Equal("[DEBUG] message\n"))
+	cl.ShutdownLogger()
+}
+
+func (s *GomolSuite) TestInfoWriter(t sweet.T) {
+	w := newTestConsoleWriter()
+	cfg := NewConsoleLoggerConfig()
+	cfg.Colorize = false
+	cfg.InfoWriter = w
+	cl, _ := NewConsoleLogger(cfg)
+
+	cl.InitLogger()
+	cl.Logm(
+		time.Now(),
+		gomol.LevelInfo,
+		nil,
+		"message",
+	)
+	Expect(w.Output).To(HaveLen(1))
+	Expect(w.Output[0]).To(Equal("[INFO] message\n"))
+	cl.ShutdownLogger()
+}
+
+func (s *GomolSuite) TestWarningWriter(t sweet.T) {
+	w := newTestConsoleWriter()
+	cfg := NewConsoleLoggerConfig()
+	cfg.Colorize = false
+	cfg.WarningWriter = w
+	cl, _ := NewConsoleLogger(cfg)
+
+	cl.InitLogger()
+	cl.Logm(
+		time.Now(),
+		gomol.LevelWarning,
+		nil,
+		"message",
+	)
+	Expect(w.Output).To(HaveLen(1))
+	Expect(w.Output[0]).To(Equal("[WARN] message\n"))
+	cl.ShutdownLogger()
+}
+
+func (s *GomolSuite) TestErrorWriter(t sweet.T) {
+	w := newTestConsoleWriter()
+	cfg := NewConsoleLoggerConfig()
+	cfg.Colorize = false
+	cfg.ErrorWriter = w
+	cl, _ := NewConsoleLogger(cfg)
+
+	cl.InitLogger()
+	cl.Logm(
+		time.Now(),
+		gomol.LevelError,
+		nil,
+		"message",
+	)
+	Expect(w.Output).To(HaveLen(1))
+	Expect(w.Output[0]).To(Equal("[ERROR] message\n"))
+	cl.ShutdownLogger()
+}
+
+func (s *GomolSuite) TestFatalWriter(t sweet.T) {
+	w := newTestConsoleWriter()
+	cfg := NewConsoleLoggerConfig()
+	cfg.Colorize = false
+	cfg.FatalWriter = w
+	cl, _ := NewConsoleLogger(cfg)
+
+	cl.InitLogger()
+	cl.Logm(
+		time.Now(),
+		gomol.LevelFatal,
+		nil,
+		"message",
+	)
+	Expect(w.Output).To(HaveLen(1))
+	Expect(w.Output[0]).To(Equal("[FATAL] message\n"))
+	cl.ShutdownLogger()
 }
