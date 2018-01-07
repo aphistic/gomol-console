@@ -7,6 +7,7 @@ import (
 	"github.com/aphistic/gomol"
 	"github.com/aphistic/sweet"
 	. "github.com/onsi/gomega"
+	"os"
 )
 
 func TestMain(m *testing.M) {
@@ -181,6 +182,18 @@ func (s *GomolSuite) TestConsoleBaseAttrs(t sweet.T) {
 		"test 1234")
 	Expect(w.Output).To(HaveLen(1))
 	Expect(w.Output[0]).To(Equal("[DEBUG] test 1234\n"))
+}
+
+func (s *GomolSuite) TestDefaultWriters(t sweet.T) {
+	cfg := NewConsoleLoggerConfig()
+	cfg.Colorize = false
+	cl, _ := NewConsoleLogger(cfg)
+
+	Expect(cl.writers[gomol.LevelDebug]).To(Equal(os.Stdout))
+	Expect(cl.writers[gomol.LevelInfo]).To(Equal(os.Stdout))
+	Expect(cl.writers[gomol.LevelWarning]).To(Equal(os.Stdout))
+	Expect(cl.writers[gomol.LevelError]).To(Equal(os.Stdout))
+	Expect(cl.writers[gomol.LevelFatal]).To(Equal(os.Stdout))
 }
 
 func (s *GomolSuite) TestDebugWriter(t sweet.T) {
