@@ -196,6 +196,20 @@ func (s *GomolSuite) TestDefaultWriters(t sweet.T) {
 	Expect(cl.writers[gomol.LevelFatal]).To(Equal(os.Stdout))
 }
 
+func (s *GomolSuite) TestDefaultWriterOverridden(t sweet.T) {
+	cfg := NewConsoleLoggerConfig()
+	cfg.Colorize = false
+	cfg.Writer = os.Stderr
+	cfg.WarningWriter = os.Stdin
+	cl, _ := NewConsoleLogger(cfg)
+
+	Expect(cl.writers[gomol.LevelDebug]).To(Equal(os.Stderr))
+	Expect(cl.writers[gomol.LevelInfo]).To(Equal(os.Stderr))
+	Expect(cl.writers[gomol.LevelWarning]).To(Equal(os.Stdin))
+	Expect(cl.writers[gomol.LevelError]).To(Equal(os.Stderr))
+	Expect(cl.writers[gomol.LevelFatal]).To(Equal(os.Stderr))
+}
+
 func (s *GomolSuite) TestDebugWriter(t sweet.T) {
 	w := newTestConsoleWriter()
 	cfg := NewConsoleLoggerConfig()

@@ -16,15 +16,18 @@ type ConsoleLoggerConfig struct {
 	// Colorize specifies whether the output will include ANSI colors or not. Defaults to true
 	Colorize bool
 
-	// DebugWriter is the io.Writer debug messages will be written to. Defaults to os.Stdout
+	// Writer is the io.Writer to be used if not overridden in other options. Defaults to os.Stdout
+	Writer io.Writer
+
+	// DebugWriter is the io.Writer debug messages will be written to. Defaults to Writer
 	DebugWriter io.Writer
-	// InfoWriter is the io.Writer info messages will be written to. Defaults to os.Stdout
+	// InfoWriter is the io.Writer info messages will be written to. Defaults to Writer
 	InfoWriter io.Writer
-	// WarningWriter is the io.Writer warning messages will be written to. Defaults to os.Stdout
+	// WarningWriter is the io.Writer warning messages will be written to. Defaults to Writer
 	WarningWriter io.Writer
-	// ErrorWriter is the io.Writer error messages will be written to. Defaults to os.Stdout
+	// ErrorWriter is the io.Writer error messages will be written to. Defaults to Writer
 	ErrorWriter io.Writer
-	// FatalWriter is the io.Writer fatal messages will be written to. Defaults to os.Stdout
+	// FatalWriter is the io.Writer fatal messages will be written to. Defaults to Writer
 	FatalWriter io.Writer
 }
 
@@ -71,11 +74,16 @@ var printerr = ansi.ColorFunc("red")
 var printfatal = ansi.ColorFunc("red+b")
 
 func (l *ConsoleLogger) populateWriters(cfg *ConsoleLoggerConfig) {
-	l.writers[gomol.LevelDebug] = os.Stdout
-	l.writers[gomol.LevelInfo] = os.Stdout
-	l.writers[gomol.LevelWarning] = os.Stdout
-	l.writers[gomol.LevelError] = os.Stdout
-	l.writers[gomol.LevelFatal] = os.Stdout
+	var defaultWriter io.Writer = os.Stdout
+	if cfg.Writer != nil {
+		defaultWriter = cfg.Writer
+	}
+
+	l.writers[gomol.LevelDebug] = defaultWriter
+	l.writers[gomol.LevelInfo] = defaultWriter
+	l.writers[gomol.LevelWarning] = defaultWriter
+	l.writers[gomol.LevelError] = defaultWriter
+	l.writers[gomol.LevelFatal] = defaultWriter
 
 	if cfg.DebugWriter != nil {
 		l.writers[gomol.LevelDebug] = cfg.DebugWriter
